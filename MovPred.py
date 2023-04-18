@@ -58,10 +58,10 @@ for col in num_cols:
     print((abs_z_scores < 4))
     movies = movies[filtered_entries]
 # create boxplot for each numerical column
-plt.figure(figsize=(10, 6))
-movies[num_cols].boxplot()
-plt.xticks(rotation=45)
-plt.show()
+# plt.figure(figsize=(10, 6))
+# movies[num_cols].boxplot()
+# plt.xticks(rotation=45)
+# plt.show()
 # print(movies[1])
 
 
