@@ -1,18 +1,35 @@
 import pandas as pd 
 import numpy as np
+import sys
 import matplotlib.pyplot as plt
 import pickle
 from scipy import stats
 from sklearn.calibration import LabelEncoder
-from sklearn.model_selection import train_test_split
 from sklearn import metrics 
-from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import MinMaxScaler, PolynomialFeatures
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import r2_score, mean_squared_error
 
+
 def main():
-    movies =pd.read_csv("movies-regression-dataset.csv")
+    # Check that the script is called with the correct number of arguments
+    if len(sys.argv) != 2:
+        print('Usage: python predict.py <data_file>')
+        return
+
+    # Load the saved Pol_model from the file using pickle
+    with open('Poly_Reg.pkl', 'rb') as file:
+        reg_model = pickle.load(file)
+    with open('poly.pkl', 'rb') as file:
+        Pol_model = pickle.load(file)
+
+    # Load the new dataset from the file specified as an argument
+    data_file = sys.argv[1]
+ 
+    movies =pd.read_csv(data_file)
+    print(movies.head(6))
+
+    # Preprocess the data if necessary
     movies.drop(['id', 'original_title', 'title'], axis=1, inplace=True)
     #PREPROCCESSING
     # Fix missing values by filling with the mean or mode
@@ -36,7 +53,6 @@ def main():
     movies = handleMissingNumValues(movies,'vote_average')
 
     #drop dupes 
-    movies = movies.drop_duplicates()
 
     # Extract the columns that need to be scaled
     cols_to_scale = ['budget', 'viewercount', 'revenue', 'runtime', 'vote_count', 'vote_average']
@@ -63,19 +79,22 @@ def main():
     movies[numerical_cols] = scaler.fit_transform(movies[numerical_cols])
 
 
-    movies.to_csv("modified_movies.csv", index=False)
-    selected_features = findBestFeatures(movies)
-    polyResults = PolyReg(movies,selected_features)
 
 
+    # Use the loaded Pol_model to make predictions on the new 
+
+    X_test = movies[['runtime','Drama']]
+    X_test_poly = Pol_model.transform(X_test)
 
 
+    predictions = reg_model.predict(X_test_poly)
 
+    # Evaluate the Pol_model
+    mse = mean_squared_error(movies['vote_average'], predictions)
 
-
-
-
-
+    # Print the predictions
+    print(f"mean squeared error : {mse}")
+    print(f"prediction : {predictions}")
 
 
 
@@ -93,92 +112,16 @@ def handleMissingNumValues(movies,col):
     percent_total_missing = (total_missing / movies[col].shape[0] ) * 100
 
     # Decide whether to drop the missing value records or impute them with mean
-    if percent_total_missing < 5:
+    if percent_total_missing > 5:
         # Drop rows with missing values
-        movies = movies.dropna(subset=[col])
-    else:
+        # movies = movies.dropna(subset=[col])
+
+    
         # Impute missing values with mean
         movies = movies[col].fillna(movies.mean())
     return movies
 
-def findBestFeatures(movies):
 
-
-    # Calculate the correlation matrix
-    corr_matrix = movies.corr()
-
-    # Get the correlation coefficients between the dependent variable and the independent variables
-    correlation_coefficients = corr_matrix['vote_average'].drop('vote_average')
-
-    # Sort the coefficients by their absolute values in descending order
-    sorted_coefficients = correlation_coefficients.abs().sort_values(ascending=False)
-
-    # Select the top n features with the highest correlation coefficients
-    n = 2
-    selected_features = sorted_coefficients[:n].index.tolist()
-    print(selected_features)
-    return selected_features
-
-def PolyReg(movies,selected_features):
-    X = movies[selected_features]
-    y = movies['vote_average']
-
-    # Split the dataset into training and testing sets
-    from sklearn.model_selection import train_test_split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-
-    # Define the best parameters
-    best_degree = 1
-    best_error = float('inf')
-    best_r2 = float('-inf')
-    best_overfitting = float('inf')
-    best_mse = float('inf')
-    
-    # Loop over different degrees and select the best one
-    for degree in range(1, 5):
-        # Apply polynomial regression
-        poly = PolynomialFeatures(degree=degree)
-        X_train_poly = poly.fit_transform(X_train)
-        X_test_poly = poly.transform(X_test)
-        poly_reg = LinearRegression()
-        poly_reg.fit(X_train_poly, y_train)
-        # Save the model to a file using pickle
-
-        # Make predictions on the testing set
-        y_pred = poly_reg.predict(X_test_poly)
-
-        # Evaluate the model
-        rmse = mean_squared_error(y_test, y_pred, squared=False)
-        r2 = r2_score(y_test, y_pred)
-        mse = mean_squared_error(y_test, y_pred)
-        overfitting = abs(rmse - mean_squared_error(y_train, poly_reg.predict(X_train_poly), squared=False))
-
-        # Update the best parameters
-        if  r2 > best_r2 and mse <best_mse:
-            best_degree = degree
-            best_error = rmse
-            best_r2 = r2
-            best_overfitting = overfitting
-            best_model = poly_reg
-            best_polModel = poly
-            best_mse = mse
-    print(mean_squared_error(y_test, y_pred))
-
-    filename = 'Poly_Reg.pkl'
-    filename2 = 'poly.pkl'
-    with open(filename, 'wb') as file:
-        pickle.dump(best_model, file)
-    with open(filename2, 'wb') as file:
-        pickle.dump(best_polModel, file)
-    # Print the best parameters
-    print(f"poly degree: {best_degree}")
-    print(f"poly MSE: {best_mse}")
-
-    print(f"poly RMSE: {best_error}")
-    print(f"poly R-squared score: {best_r2}")
-    print(f"poly overfitting: {best_overfitting}")
-    return {"poly_degree" : best_degree, "poly_error":best_error, "poly_r2" : best_r2 ,"poly_overfitting":best_overfitting}
 
 def cleanOutliers(data):
     threshold = 3
@@ -255,25 +198,5 @@ def CatEncoding(df ):
 
 
 
-
-    # # Extract the genres column as a list
-    # genres_list = movies['genres'].str.split('|')
-
-    # # Get a list of all unique genres
-    # unique_genres = set([genre for genres in genres_list for genre in genres])
-
-    # # Create a dictionary mapping each unique genre to a binary column
-    # genre_dict = {}
-    # for genre in unique_genres:
-    #     genre_dict[genre] = [1 if genre in genres else 0 for genres in genres_list]
-    # print(genre_dict)
-    # # Create a dataframe from the dictionary and concatenate it to the original dataset
-    # genre_movies = pd.DataFrame(genre_dict)
-    # movies = pd.concat([movies, genre_movies], axis=1)
-
-    # # Drop the original 'Genres' column
-    # movies.drop('genres', axis=1, inplace=True)
-    
-
-
-main()
+if __name__ == '__main__':
+    main()
