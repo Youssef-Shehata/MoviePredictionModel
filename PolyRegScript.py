@@ -1,3 +1,4 @@
+import string
 import pandas as pd 
 import numpy as np
 import sys
@@ -22,16 +23,20 @@ def main():
         reg_model = pickle.load(file)
     with open('poly.pkl', 'rb') as file:
         Pol_model = pickle.load(file)
+    with open('ridge.pkl', 'rb') as file:
+        Ridge_model = pickle.load(file)
 
     # Load the new dataset from the file specified as an argument
     data_file = sys.argv[1]
  
     movies =pd.read_csv(data_file)
-    print(movies.head(6))
+    # print(movies.head(6))
 
     # Preprocess the data if necessary
-    movies.drop(['id', 'original_title', 'title'], axis=1, inplace=True)
-    #PREPROCCESSING
+    preprocess_titles(movies, 'original_title')
+    preprocess_titles(movies, 'title')
+
+        #PREPROCCESSING
     # Fix missing values by filling with the mean or mode
     movies['homepage'].fillna('Uknown', inplace=True)
     movies['overview'].fillna('No overview available', inplace=True)
@@ -78,24 +83,46 @@ def main():
     # Normalize numerical columns
     movies[numerical_cols] = scaler.fit_transform(movies[numerical_cols])
 
+    movies.to_csv("TEST_modified_movies.csv", index=False)
+    selected_features = ['runtime','vote_count']
+    # selected_features = findBestFeatures(movies)
 
 
 
-    # Use the loaded Pol_model to make predictions on the new 
 
-    X_test = movies[['runtime','Drama']]
+
+
+
+
+
+
+
+    # print(selected_features)
+    # Use the loaded Pol_model to make predictions on the new dataset 
+
+    X_test = movies[selected_features]
     X_test_poly = Pol_model.transform(X_test)
-
-
     predictions = reg_model.predict(X_test_poly)
 
     # Evaluate the Pol_model
     mse = mean_squared_error(movies['vote_average'], predictions)
+    r2 = r2_score(movies['vote_average'], predictions)
 
-    # Print the predictions
-    print(f"mean squeared error : {mse}")
-    print(f"prediction : {predictions}")
+    print(f"Pol_Regression MSE  : {mse}")
+    print(f"Pol_Regression R-squared score: {r2}")
 
+
+
+
+    # Use the loaded Ridge_model to make predictions on the new 
+    y_pred =Ridge_model.predict(movies[selected_features]) 
+
+    # Evaluate the Pol_model
+    mse = mean_squared_error(movies['vote_average'], y_pred )
+    r2 = r2_score(movies['vote_average'], y_pred)
+    
+    print(f"ridge MSE: {mse}")
+    print(f"ridge R-squared score: {r2}")
 
 
 def handleMissingNumValues(movies,col):
@@ -160,7 +187,8 @@ def CatEncoding(df ):
         # apply function to genres column
     df['genres'] = df['genres'].apply(lambda x: update_genres(x))
     unique_genres = set(genre for movie_genres in df['genres'] for genre in movie_genres)
-    print(unique_genres)
+    # print(unique_genres)
+
     # Output: {'Drama', 'War', 'Action', 'Documentary', 'Comedy', 'Horror', 'Music', 'Crime', 'Thriller', 'Romance'}
     # Create a new dataframe with one column for each unique genre
     for genre in unique_genres:
@@ -194,9 +222,58 @@ def CatEncoding(df ):
     return df
 
 
+def findBestFeatures(movies):
+    # Calculate the correlation matrix
+    corr_matrix = movies.corr()
+
+    # Get the correlation coefficients between the dependent variable and the independent variables
+    correlation_coefficients = corr_matrix['vote_average'].drop('vote_average')
+
+    # Sort the coefficients by their absolute values in descending order
+    sorted_coefficients = correlation_coefficients.abs().sort_values(ascending=False)
+
+    # Select the top n features with the highest correlation coefficients
+    n = 2
+    selected_features = sorted_coefficients[:n].index.tolist()
+    # print(selected_features)
+    return selected_features
+
+def preprocess_titles(df, column_name):
+    # remove leading and trailing whitespaces
+    df[column_name] = df[column_name].str.strip()
+
+    # convert all characters to lowercase
+    df[column_name] = df[column_name].str.lower()
+
+    # remove punctuation marks
+    df[column_name] = df[column_name].str.translate(str.maketrans('', '', string.punctuation))
+
+    # tokenize the titles
+    df[column_name] = df[column_name].str.split()
+
+    # # print the preprocessed data
+    # fc = df[column_name].tolist()
+    # print(f'{column_name}:', fc)
+    # print("////////////////////////////////////////////////////")
 
 
 
+
+def findBestFeatures(movies):
+    # Calculate the correlation matrix
+    corr_matrix = movies.corr()
+
+    # Get the correlation coefficients between the dependent variable and the independent variables
+    correlation_coefficients = corr_matrix['vote_average'].drop('vote_average')
+
+    # Sort the coefficients by their absolute values in descending order
+    sorted_coefficients = correlation_coefficients.abs().sort_values(ascending=False)
+
+    # Select the top n features with the highest correlation coefficients
+    n = 2
+    selected_features = sorted_coefficients[:n].index.tolist()
+    print(selected_features)
+    return selected_features
 
 if __name__ == '__main__':
     main()
