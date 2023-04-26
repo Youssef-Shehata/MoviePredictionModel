@@ -251,8 +251,8 @@ def PolyReg(movies, selected_features):
 
     ax.scatter(X_test, y_test , color='blue')
     ax.plot(X_test, y_pred , color='red')
-    ax.set_xlabel('Actual')
-    ax.set_ylabel('PolyReg Predicted')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
     plt.show()
 
     return {"poly_degree": best_degree, "poly_error": best_error, "poly_r2": best_r2,
