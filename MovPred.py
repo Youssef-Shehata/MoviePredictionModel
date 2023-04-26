@@ -165,13 +165,18 @@ def ridge(movies,selected_features):
 
 
     # Plot the actual vs predicted values
-    fig, ax = plt.subplots()
-    ax.scatter(y_test, y_pred)
-    ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=4)
-    ax.set_xlabel('Actual')
-    ax.set_ylabel('ridge Predicted')
-    plt.show()
+    
 
+
+
+
+    fig, ax = plt.subplots()
+    X_test=np.arange(0,len(X_test),1)
+    ax.scatter(X_test, y_test , color='blue')
+    ax.plot(X_test, y_pred , color='red')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    plt.show()
     return { "rigde_error": rmse, "ridge_r2": r2,
             "ridge_overfitting": overfitting}
 
@@ -210,7 +215,7 @@ def PolyReg(movies, selected_features):
         overfitting = abs(rmse - mean_squared_error(y_train, poly_reg.predict(X_train_poly), squared=False))
 
         # Update the best parameters
-        if r2 > best_r2 and mse < best_mse:
+        if r2 > best_r2 :
             best_degree = degree
             best_error = rmse
             best_r2 = r2
@@ -235,10 +240,17 @@ def PolyReg(movies, selected_features):
     print(f"poly overfitting: {best_overfitting}")
 
 
-    # Plot the actual vs predicted values
+
+
+
+
     fig, ax = plt.subplots()
-    ax.scatter(y_test, y_pred)
-    ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'k--', lw=4)
+    X_test=np.arange(0,len(X_test),1)
+    X_test_poly=np.arange(0,len(X_test),1)
+
+
+    ax.scatter(X_test, y_test , color='blue')
+    ax.plot(X_test, y_pred , color='red')
     ax.set_xlabel('Actual')
     ax.set_ylabel('PolyReg Predicted')
     plt.show()
