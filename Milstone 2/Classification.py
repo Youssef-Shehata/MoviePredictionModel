@@ -45,7 +45,7 @@ def main():
     movies['homepage_freq_enc'].fillna(0, inplace=True)
     # movies = Keyencoding(movies)
     movies['overview'].fillna('', inplace=True)
-    movies['tagline'].fillna('', inplace=True)
+    movies['tagline'].fillna('Nan', inplace=True)
     # Fix inconsistent values in numerical columns by clipping or replacing with a standardized value
     movies['runtime'] = movies['runtime'].clip(lower=0, upper=400)
 
@@ -66,14 +66,22 @@ def main():
     movies = handleMissingNumValues(movies, 'vote_count')
 
     # drop dupes
-    movies.drop(['id', 'original_title', 'title' ,'tagline', 'keywords'], axis=1, inplace=True)
+    movies.drop(['id', 'original_title', 'title' , 'keywords'], axis=1, inplace=True)
 
     movies = movies.drop_duplicates()
     movies = preOverview(movies)
 
+    total = movies.shape[0]
+    threshold = total * .0005
+    cols = ['overview','tagline'] 
+    movies = movies.apply(lambda x:x.mask(x.map(x.value_counts()) < threshold, 'RARE') if x.name in cols else x)
+    movies = pd.get_dummies(data = movies , columns = cols)
+    movies.drop(['overview_RARE','tagline_RARE'  ], axis=1, inplace=True)
+
 
     # Extract the columns that need to be scaled
     cols_to_scale = ['budget', 'viewercount', 'revenue', 'runtime', 'vote_count']
+
 
     # Create a StandardScaler object
     scaler = StandardScaler()
@@ -188,13 +196,11 @@ def preOverview(movies):
     overviews = [normalize(overview) for overview in movies['overview']]
 
     # Stem the words in the overview column
-    overviews = [' '.join([stemmer.stem(word) for word in overview if word not in stop_words]) for overview in overviews]
+    
+    overviews = [''.join([stemmer.stem(word) for word in overview if word not in stop_words]) for overview in overviews]
     # One-hot encode the overview column
     movies['overview'] = overviews
-    overview_features = OneHotEncoder().fit_transform(movies['overview'].values.reshape(-1,1))
 
-    # Add the one-hot encoded overview features to the DataFrame
-    movies['overview'] = overview_features.shape[0]
     return movies
 
 
