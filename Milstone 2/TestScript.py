@@ -187,12 +187,11 @@ def handleMissingNumValues(movies, col):
     percent_total_missing = (total_missing / movies[col].shape[0]) * 100
 
     # Decide whether to drop the missing value records or impute them with mean
-    if percent_total_missing < 5:
-        # Drop rows with missing values
-        movies = movies.dropna(subset=[col])
-    else:
-        # Impute missing values with mean
-        movies = movies[col].fillna(movies.mean())
+
+    # data = pd.read_csv("mean.csv")
+
+    movies.fillna(movies.mean(numeric_only=True).round(1), inplace=True)
+
     return movies
 
 
