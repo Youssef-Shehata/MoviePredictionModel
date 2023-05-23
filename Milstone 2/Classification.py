@@ -30,7 +30,8 @@ def main():
 
     preprocess_titles(movies, 'original_title')
     preprocess_titles(movies, 'title')
-
+    with open("mean.csv", 'w') as file:
+        file.write(str(movies.mean(numeric_only=True).round(1)))
 
     # PREPROCCESSING
     # Fix missing values by filling with the mean or mode
@@ -105,24 +106,26 @@ def main():
 
     movies.to_csv("modified_movies.csv", index=False)
         #  Split the data into a training set and a test set
-    X_train, X_test, y_train, y_test = train_test_split(movies.drop('Rate', axis=1), movies['Rate'], test_size=0.25)
+    X_train, X_test, y_train, y_test = train_test_split(movies.drop('Rate', axis=1), movies['Rate'], test_size=0.2)
 
     # Scale the features to a common scale
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.transform(X_test)
     # Apply feature selection
-    def my_score(X, y):
-        return mutual_info_regression(X, y, random_state=0)
+
+    # def my_score(X, y):
+    #     return mutual_info_regression(X, y, random_state=0)
 
     # selector = SelectKBest(score_func=my_score, k=5)
     
     # X_train = selector.fit_transform(X_train, y_train)
     # X_test = selector.transform(X_test)
+
     # Save the dictionary to a file
-    import json 
-    with open("classificationFeatures.json", "w") as f:
-        json.dump(X_test.tolist(), f, indent=4)
+    # import json 
+    # with open("classificationFeatures.json", "w") as f:
+    #     json.dump(X_test.tolist(), f, indent=4)
 
 
     # Train the models
